@@ -1,0 +1,1 @@
+body{min-height:900px}.results{grid-template-columns:1fr}.release-card{max-width:760px}.search-panel{position:relative}.search-panel:after{content:"公开目录 · 厂商链接解析";position:absolute;right:22px;bottom:18px;color:var(--muted);font-size:11px}

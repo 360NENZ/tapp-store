@@ -1,0 +1,16 @@
+{
+  "long_description": "用于查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO 公开 OTA 目录的中文工具。采用设备、地区、固件版本三级联动下拉选择，并保留手动查询兜底；通过 OTA 网页短期会话按需生成 OPlus 签名下载直链，并支持小米固件地址解析。1.0.2 同时将 OP 设备简称展开为 OnePlus 全称显示。",
+  "tags": ["OTA", "固件", "ROM", "OnePlus", "OPPO", "Realme", "小米"],
+  "featured": false,
+  "verified": false,
+  "preview": {
+    "version": 1,
+    "type": "snapshot",
+    "html": "preview.html",
+    "styles": ["page.css", "preview.css"],
+    "viewport": {"width": 1440, "height": 900},
+    "fit": "cover",
+    "focus": {"x": 0.5, "y": 0.5},
+    "theme": "light"
+  }
+}

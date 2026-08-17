@@ -1,0 +1,147 @@
+{
+  "id": "top.360nenz.ota-link",
+  "name": "OTA 包链接解析器",
+  "version": "1.0.2",
+  "minSystemVersion": "0.3.27",
+  "description": "查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
+  "category": "utility",
+  "main": "main.js",
+  "author": {
+    "name": "360NENZ | AstralTz",
+    "url": "https://github.com/360NENZ"
+  },
+  "permissions": [
+    "network:fetch",
+    "ui:notification",
+    "ui:theme",
+    "ui:openUrl"
+  ],
+  "settings": [],
+  "iconSvg": "<svg viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'><path d='M12 3v11m0 0 4-4m-4 4-4-4M5 17v2h14v-2' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/><path d='M5 7h3m8 0h3' stroke='currentColor' stroke-width='2' stroke-linecap='round'/></svg>",
+  "themeColor": "#2563eb",
+  "hasPage": true,
+  "cssMode": "separated",
+  "pageStyles": "page.css",
+  "pageTemplate": "page.html",
+  "homepage": "https://myriad.360nenz.top/",
+  "repository": "https://github.com/360NENZ/tapp-store",
+  "openUrls": [
+    {
+      "id": "ota-api-docs",
+      "url": "https://roms.danielspringer.at/api/ota.php?help=1&format=html",
+      "match": "exact"
+    }
+  ],
+  "apis": {
+    "otaCatalog": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://roms.danielspringer.at/api/ota.php",
+      "method": "GET",
+      "headers": {
+        "Accept": "application/json",
+        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+      },
+      "cacheTtl": 300,
+      "description": "加载公开 OTA 目录与下拉选项"
+    },
+    "otaSearch": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://roms.danielspringer.at/api/ota.php?device={{params.device}}&region={{params.region}}&model={{params.model}}&id={{params.id}}",
+      "method": "GET",
+      "headers": {
+        "Accept": "application/json",
+        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+      },
+      "cacheTtl": 60,
+      "description": "按手动输入条件查询 OTA 目录"
+    },
+    "prepareArchiveOta": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://roms.danielspringer.at/index.php?view=ota",
+      "method": "POST",
+      "bodyMode": "form",
+      "headers": {
+        "Accept": "text/html,application/xhtml+xml",
+        "Cookie": "PHPSESSID={{params.sessionId}}",
+        "Origin": "https://roms.danielspringer.at",
+        "Referer": "https://roms.danielspringer.at/index.php?view=ota",
+        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+      },
+      "body": {
+        "device": "{{params.device}}",
+        "region": "{{params.region}}",
+        "version_index": "{{params.versionIndex}}"
+      },
+      "cacheTtl": 0,
+      "description": "创建短期 OTA 网页会话并取得解析令牌"
+    },
+    "resolveArchiveOta": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://roms.danielspringer.at/index.php?view=ota&ota_action=resolve_json",
+      "method": "POST",
+      "bodyMode": "form",
+      "headers": {
+        "Accept": "application/json",
+        "Cookie": "PHPSESSID={{params.sessionId}}",
+        "Origin": "https://roms.danielspringer.at",
+        "Referer": "https://roms.danielspringer.at/index.php?view=ota",
+        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+      },
+      "body": {
+        "k": "{{params.key}}",
+        "csrf": "{{params.csrf}}"
+      },
+      "cacheTtl": 0,
+      "description": "使用同一短期会话生成带签名的 OTA 下载直链"
+    },
+    "resolveOplusSg": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://component-ota-sg.allawnos.com/downloadCheck?{{params.query}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "解析 OPlus 新加坡 OTA 下载入口"
+    },
+    "resolveOplusEu": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://component-ota-eu.allawnos.com/downloadCheck?{{params.query}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "解析 OPlus 欧洲 OTA 下载入口"
+    },
+    "resolveOplusIn": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://component-ota-in.allawnos.com/downloadCheck?{{params.query}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "解析 OPlus 印度 OTA 下载入口"
+    },
+    "resolveOplusCn": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://component-ota-cn.allawntech.com/downloadCheck?{{params.query}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "解析 OPlus 中国 OTA 下载入口"
+    },
+    "resolveXiaomi": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://sgp-api.buy.mi.com/bbs/api/global/phone/getdevicelist?{{params.query}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "解析小米 OTA 目录中的固件包地址"
+    }
+  }
+}
