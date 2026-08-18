@@ -1,7 +1,7 @@
 {
   "id": "top.360nenz.ota-link",
   "name": "OTA 包链接解析器",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "minSystemVersion": "0.3.27",
   "description": "离线快照下拉查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
   "category": "utility",

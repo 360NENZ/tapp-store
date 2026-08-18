@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const test = require('node:test')
 const fs = require('node:fs')
 const path = require('node:path')
-const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, isFixedOwnRecord, formatBytes, staticSmartItemsFromCatalog } = require('../main.js')
+const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, isFixedOwnRecord, directSourceResult, formatBytes, staticSmartItemsFromCatalog } = require('../main.js')
 
 test('按设备和地区构建三级目录并将新版本排在前面', () => {
   const oldRelease = { id: 'old', device: 'OP 13', region: 'EU', version: '1.0', build_timestamp: '2026-01-01T00:00:00' }
@@ -122,4 +122,13 @@ test('自有 API 只短路固定链接，动态缓存继续走外部解析顺序
   assert.equal(isFixedOwnRecord({ url: 'https://firmware-res.flyme.com/rom.zip?auth_key=1893456000-0-0-x', dynamic: false }), false)
   assert.equal(isFixedOwnRecord({ fixedUrl: 'https://cdn.example/rom.tgz' }), true)
   assert.equal(isFixedOwnRecord({ url: 'http://cdn.example/rom.zip', dynamic: false }), false)
+})
+
+test('目录直链也正确区分固定地址与带签名动态地址', () => {
+  assert.deepEqual(directSourceResult('https://cdn.example/rom.zip'), {
+    url: 'https://cdn.example/rom.zip', resolved: true, source: 'vendor', dynamic: false, expiresAt: '', note: '目录已提供直接下载链接'
+  })
+  assert.deepEqual(directSourceResult('https://firmware-res.flyme.com/rom.zip?auth_key=1893456000-0-0-x'), {
+    url: 'https://firmware-res.flyme.com/rom.zip?auth_key=1893456000-0-0-x', resolved: true, source: 'vendor', dynamic: true, expiresAt: '2030-01-01T00:00:00.000Z', note: '目录已提供带签名的临时下载链接（过期后请重新解析）'
+  })
 })

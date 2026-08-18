@@ -35,6 +35,19 @@
     return Boolean(record && !record.dynamic && !timing.dynamic && /^https:\/\//i.test(url));
   }
 
+  function directSourceResult(source) {
+    var url = clean(source);
+    var timing = linkTiming(url);
+    return {
+      url: url,
+      resolved: true,
+      source: 'vendor',
+      dynamic: timing.dynamic,
+      expiresAt: timing.expiresAt,
+      note: timing.dynamic ? '目录已提供带签名的临时下载链接（过期后请重新解析）' : '目录已提供直接下载链接'
+    };
+  }
+
   function linkTiming(url) {
     var result = { dynamic: false, expiresAt: '' };
     try {
@@ -382,7 +395,7 @@
     } catch (error) {}
     if (!source) return { url: '', resolved: false, note: '目录未提供源地址' };
     if (/\.(zip|ozip|bin|tgz|gz|img|7z|rar|tar\.gz)(?:[?#]|$)/i.test(source)) {
-      return { url: source, resolved: true, source: 'vendor', note: '目录已提供直接下载链接' };
+      return directSourceResult(source);
     }
     var parsed;
     try { parsed = new URL(source); } catch (error) {
@@ -738,7 +751,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, isFixedOwnRecord: isFixedOwnRecord, formatBytes: formatBytes, staticSmartItemsFromCatalog: staticSmartItemsFromCatalog };
+    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, isFixedOwnRecord: isFixedOwnRecord, directSourceResult: directSourceResult, formatBytes: formatBytes, staticSmartItemsFromCatalog: staticSmartItemsFromCatalog };
   }
   if (typeof window !== 'undefined' && (window._TAPP_MODE === 'page' || window._TAPP_HAS_HTML)) Tapp.lifecycle.onReady(init);
 })();
