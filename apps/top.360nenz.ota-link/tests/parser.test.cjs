@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, fullDeviceName, normalizedDeviceName, violetParams, formatBytes } = require('../main.js')
+const fs = require('node:fs')
+const path = require('node:path')
+const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, formatBytes } = require('../main.js')
 
 test('按设备和地区构建三级目录并将新版本排在前面', () => {
   const oldRelease = { id: 'old', device: 'OP 13', region: 'EU', version: '1.0', build_timestamp: '2026-01-01T00:00:00' }
@@ -63,4 +65,28 @@ test('匹配 SmartTool 的 C16 设备名称并推断 OnePlus 数字系列', () =
     device: 'OP 15',
     version: 'PLK110_16.0.3.502(CN01)'
   })
+})
+
+test('SmartTool 机型和版本可反查第三方归档目录记录', () => {
+  const release = findArchiveRelease({ device: '[C16动态解析]OnePlus 15', version: 'PLK110_16.0.3.502(CN01)' }, [
+    { id: 'eu', device: 'OP 15', region: 'EU', version: 'PLK110_16.0.3.502(CN01)' },
+    { id: 'cn', device: 'OP 15', region: 'CN', version: 'PLK110_16.0.3.502(CN01)' }
+  ])
+  assert.equal(release.id, 'cn')
+})
+
+test('HAR 快照覆盖两种包型、六个品牌和 SmartTool 关键入口', () => {
+  const snapshot = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smarttool-catalog.snapshot.json'), 'utf8'))
+  assert.deepEqual(Object.keys(snapshot.packages).sort(), ['afterSales', 'full'])
+  const brands = new Set(Object.values(snapshot.packages).flatMap((pkg) => Object.keys(pkg)))
+  for (const brand of ['OPPO', 'OnePlus', 'Realme', 'Xiaomi', 'Redmi', '魅族']) assert.equal(brands.has(brand), true)
+  assert.equal(snapshot.endpointCounts.series, 12)
+  assert.equal(snapshot.endpointCounts.devices, 60)
+  assert.equal(snapshot.endpointCounts.versions, 57)
+  assert.ok(snapshot.packages.full.OnePlus.series['数字系列'].devices['[C16动态解析]OnePlus 15'])
+})
+
+test('区分固定链接和包含厂商过期签名的动态链接', () => {
+  assert.deepEqual(linkTiming('https://example.com/a.zip'), { dynamic: false, expiresAt: '' })
+  assert.deepEqual(linkTiming('https://example.com/a.zip?Expires=1893456000&Signature=x'), { dynamic: true, expiresAt: '2030-01-01T00:00:00.000Z' })
 })

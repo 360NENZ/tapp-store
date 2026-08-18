@@ -1,5 +1,5 @@
 {
-  "long_description": "用于查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA 目录的中文工具。采用设备、地区、固件版本三级联动下拉选择，并保留手动查询兜底；优先读取自有 API 缓存，随后尝试第三方 OTA 归档站与 VioletTool 动态解析，最后保留目录原始地址。1.1.0 同时将 OP 设备简称展开为 OnePlus 全称显示。",
+  "long_description": "用于查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA 目录的中文工具。采用设备、地区、固件版本三级联动下拉选择，并提供 SmartTool 包类型五级目录和手动查询兜底；优先读取自有 API 缓存，随后尝试第三方 OTA 归档站与 VioletTool 动态解析，最后保留目录原始地址。1.2.0 同时收集 HAR 目录证据并区分固定与动态链接。",
   "tags": ["OTA", "固件", "ROM", "OnePlus", "OPPO", "Realme", "小米"],
   "featured": false,
   "verified": false,
