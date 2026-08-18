@@ -29,6 +29,13 @@ test('优先选择与版本匹配的 OTA 压缩包', () => {
   assert.equal(pickDownloadUrl(payload, release), payload.rom_url)
 })
 
+test('识别各种 OTA 压缩包扩展名和带片段的下载地址', () => {
+  const release = { version: '1.0' }
+  for (const url of ['https://a.example/a.bin', 'https://a.example/a.img#download', 'https://a.example/a.7z', 'https://a.example/a.rar', 'https://a.example/a.tar.gz']) {
+    assert.equal(pickDownloadUrl({ url }, release), url)
+  }
+})
+
 test('格式化 OTA 包字节数', () => {
   assert.equal(formatBytes(8304912951), '7.73 GiB')
   assert.equal(formatBytes(undefined), '—')
@@ -94,6 +101,7 @@ test('区分固定链接和包含厂商过期签名的动态链接', () => {
 test('自有 API 只短路固定链接，动态缓存继续走外部解析顺序', () => {
   assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip', dynamic: false }), true)
   assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip?sign=x', dynamic: true }), false)
+  assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip?sign=x', dynamic: false }), false)
   assert.equal(isFixedOwnRecord({ fixedUrl: 'https://cdn.example/rom.tgz' }), true)
   assert.equal(isFixedOwnRecord({ url: 'http://cdn.example/rom.zip', dynamic: false }), false)
 })

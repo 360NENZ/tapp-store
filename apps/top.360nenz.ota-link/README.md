@@ -25,7 +25,7 @@
 
 ### 自有 API（可选）
 
-Tapp 会先请求独立的 `https://ota-api.360nenz.top/api/ota/resolve`。对应服务源码放在 `D:\WorkSpace\Git\ota-link-api`，与 Myriad 商店统计 Worker 分开部署，并使用独立的 `OTA_LINKS` KV 保存记录：只有永久稳定地址才会被 Tapp 直接采用（`dynamic=false`）；带厂商签名的短期地址即使仍在 API 中可读，也会由 Tapp 继续走第三方解析顺序，避免把缓存误当成长期直链。缓存身份包含地区和发布 ID，接口未部署或返回 404 不影响正常解析。
+Tapp 会先请求独立的 `https://ota-api.360nenz.top/api/ota/resolve`。对应服务源码放在 `D:\WorkSpace\Git\ota-link-api`，与 Myriad 商店统计 Worker 分开部署，并使用独立的 `OTA_LINKS` KV 保存记录：只有永久稳定地址才会被 Tapp 直接采用（`dynamic=false`）；带厂商签名的短期地址即使仍在 API 中可读，也会由 Tapp 继续走第三方解析顺序，避免把缓存误当成长期直链。当前工作区已包含 Worker 源码和部署配置，但 `ota-api.360nenz.top` 需要在你的 Cloudflare 账户中完成 Worker、KV、自定义域和管理员令牌配置；在该域名尚未部署或返回 404 时，Tapp 会静默继续第三方解析，不会阻塞下载。缓存身份包含地区和发布 ID。
 
 同一包版本可在自有 API 中同时保存 `archive` 与 `violettool` 两处来源。API 优先返回未过期的固定链接，其他可用链接放在 `alternatives`；Tapp 仅在首条结果为固定 HTTPS 链接时短路，否则严格按“Daniel Springer 第三方归档站 → VioletTool → 厂商入口/目录原始地址”继续解析。
 
@@ -39,7 +39,7 @@ node apps/top.360nenz.ota-link/scripts/extract-smarttool-har.mjs `
   apps/top.360nenz.ota-link/tests/fixtures/smarttool-catalog.snapshot.json
 ```
 
-当前 HAR 共 129 条目录请求：`series` 12 条、`devices` 60 条、`versions` 57 条，覆盖 `full`、`afterSales` 两种包型以及 OPPO、OnePlus、Realme、Xiaomi、Redmi、魅族六个品牌。完整在线目录采集器和固定链接导入工具位于独立 `ota-link-api` 仓库。
+当前 HAR 共 129 条目录请求：`series` 12 条、`devices` 60 条、`versions` 57 条，覆盖 `full`、`afterSales` 两种包型以及 OPPO、OnePlus、Realme、Xiaomi、Redmi、魅族六个品牌。在线目录采集器已生成 2 种包型、11 个包型-品牌组合、59 个系列、998 个机型和 35,669 个版本；其中 `afterSales / OnePlus / Turbo系列` 在当前上游连续返回 HTTP 500，保留为可重试缺口，不能宣称该单项已采集完成。完整在线目录采集器和固定链接导入工具位于独立 `ota-link-api` 仓库。
 
 Manifest 显式声明空的 `settings: []`，用于兼容将缺省设置反序列化为 `null` 的 Myriad 部署；否则声明式 API 可能返回 `Invalid Tapp settings declaration`。
 
@@ -97,6 +97,7 @@ apps/top.360nenz.ota-link/dist/top.360nenz.ota-link.tapp
 9. 对网页限流或厂商已失效的入口，确认页面显示橙色回退提示且仍可复制源地址。
 10. 点击“重新加载目录”，确认下拉选项会从第三方 OTA API 重新获取，而不是使用写死的 PHP 列表。
 11. 切换 Myriad 深色/浅色主题，确认页面颜色同步变化。
+12. 若测试自有 API，先请求 `/health` 确认 Worker 已绑定；返回站点 404 时属于尚未部署，不影响第三方解析路径。
 
 已验证用例：`OnePlus 15 / CN / PLK110_16.0.3.502(CN01)` 可通过 VioletTool 返回 `gauss-compota-c-cn.allawnfs.com` 的厂商签名 ZIP；使用 `Range: bytes=0-0` 检查得到 HTTP 206、`application/zip`，完整包大小为 9,015,199,529 字节。此链接有时效性，文档不保存具体签名 URL。
 
@@ -126,10 +127,11 @@ Co-authored-by: 姓名 <邮箱>
 
 ## 更新日志
 
-### v1.2.1 (2026-08-18)
+### v1.2.2 (2026-08-18)
 
 - 自有 API 仅对固定 HTTPS 链接短路，动态缓存继续按第三方解析顺序刷新
 - 补齐 `.bin`、`.img`、`.7z`、`.rar` 等 OTA 包识别，并收敛工具界面和移动端排版
+- SmartTool 品牌下拉与链接评分逻辑同步全部已支持包格式；自有 API 动态 URL 会再次按签名参数校验
 
 ### v1.2.0 (2026-08-18)
 

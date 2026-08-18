@@ -28,7 +28,9 @@
   }
 
   function isFixedOwnRecord(record) {
-    return Boolean(record && !record.dynamic && /^https:\/\//i.test(clean(record.url || record.fixedUrl)));
+    var url = clean(record && (record.url || record.fixedUrl));
+    var timing = linkTiming(url);
+    return Boolean(record && !record.dynamic && !timing.dynamic && /^https:\/\//i.test(url));
   }
 
   function linkTiming(url) {
@@ -164,7 +166,7 @@
   function scoreUrl(url, release) {
     var score = 0;
     var lower = url.toLowerCase();
-    if (/\.(zip|ozip|bin|tgz|gz|img)(\?|$)/i.test(url)) score += 100;
+    if (/\.(zip|ozip|bin|tgz|gz|img|7z|rar|tar\.gz)(?:[?#]|$)/i.test(url)) score += 100;
     if (/download|ota|rom|package/.test(lower)) score += 20;
     if (release.ota_version && lower.indexOf(String(release.ota_version).toLowerCase()) !== -1) score += 40;
     if (release.version && lower.indexOf(String(release.version).toLowerCase()) !== -1) score += 30;
@@ -283,8 +285,11 @@
     if (!series) {
       var seriesPayload = unwrap(await Tapp.api('violetSeries', { packageType: encode(p.packageType), brand: encode(p.brand) }));
       var seriesList = seriesPayload && (seriesPayload.items || seriesPayload.series || seriesPayload.data || seriesPayload);
-      if (Array.isArray(seriesList)) series = seriesList.find(function (x) { return clean(x.name || x) === clean(release.series); });
-      series = typeof series === 'string' ? series : clean(release.series);
+      if (Array.isArray(seriesList)) {
+        var seriesMatch = seriesList.find(function (x) { return clean(x.name || x) === clean(release.series); });
+        series = clean(seriesMatch && (seriesMatch.name || seriesMatch));
+      }
+      series = series || clean(release.series);
     }
     if (!series) throw new Error('VioletTool 未确定设备系列');
     var devicePayload = unwrap(await Tapp.api('violetDevices', { packageType: encode(p.packageType), brand: encode(p.brand), series: encode(series) }));
