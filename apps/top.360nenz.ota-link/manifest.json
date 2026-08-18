@@ -1,7 +1,7 @@
 {
   "id": "top.360nenz.ota-link",
   "name": "OTA 包链接解析器",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "minSystemVersion": "0.3.27",
   "description": "离线快照下拉查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
   "category": "utility",
@@ -43,7 +43,7 @@
       "method": "GET",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.3.0 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.3.1 (https://github.com/360NENZ/tapp-store)"
       },
       "cacheTtl": 300,
       "description": "加载公开 OTA 目录与下拉选项"
@@ -55,7 +55,7 @@
       "method": "GET",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.3.0 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.3.1 (https://github.com/360NENZ/tapp-store)"
       },
       "cacheTtl": 60,
       "description": "按手动输入条件查询 OTA 目录"
@@ -71,7 +71,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.3.0 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.3.1 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "device": "{{params.device}}",
@@ -92,7 +92,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.3.0 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.3.1 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "k": "{{params.key}}",
@@ -106,7 +106,7 @@
       "access": "public",
       "endpoint": "https://ota-api.360nenz.top/api/ota/resolve?brand={{params.brand}}&packageType={{params.packageType}}&series={{params.series}}&device={{params.device}}&version={{params.version}}&region={{params.region}}&id={{params.id}}",
       "method": "GET",
-      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.3.0" },
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.3.1" },
       "cacheTtl": 30,
       "description": "优先读取自有 API 中仍有效的固定 HTTPS 链接；动态缓存继续外部解析"
     },

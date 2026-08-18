@@ -39,9 +39,20 @@
     var result = { dynamic: false, expiresAt: '' };
     try {
       var parsed = new URL(clean(url));
-      var expires = Number(parsed.searchParams.get('Expires'));
+      var params = {};
+      parsed.searchParams.forEach(function (value, key) { params[key.toLowerCase()] = value; });
+      var expires = Number(params.expires);
       if (Number.isFinite(expires) && expires > 0) result.expiresAt = new Date(expires * 1000).toISOString();
-      result.dynamic = Boolean(result.expiresAt || parsed.searchParams.get('Signature') || parsed.searchParams.get('sign'));
+      var authKeyTimestamp = Number(String(params.auth_key || '').split('-')[0]);
+      if (!result.expiresAt && Number.isFinite(authKeyTimestamp) && authKeyTimestamp > 0) result.expiresAt = new Date(authKeyTimestamp * 1000).toISOString();
+      var signedAt = params['x-amz-date'] || params['x-goog-date'];
+      var signedTtl = Number(params['x-amz-expires'] || params['x-goog-expires']);
+      if (!result.expiresAt && /^\d{8}T\d{6}Z$/.test(signedAt || '') && Number.isFinite(signedTtl) && signedTtl >= 0) {
+        var signedAtMs = Date.parse(signedAt.slice(0, 4) + '-' + signedAt.slice(4, 6) + '-' + signedAt.slice(6, 8) + 'T' + signedAt.slice(9, 11) + ':' + signedAt.slice(11, 13) + ':' + signedAt.slice(13, 15) + 'Z');
+        if (Number.isFinite(signedAtMs)) result.expiresAt = new Date(signedAtMs + signedTtl * 1000).toISOString();
+      }
+      var signatureKeys = ['signature', 'sign', 'auth_key', 'x-amz-signature', 'x-goog-signature', 'x-oss-signature', 'q-signature', 'x-amz-security-token', 'x-oss-security-token'];
+      result.dynamic = Boolean(result.expiresAt || signatureKeys.some(function (key) { return Object.prototype.hasOwnProperty.call(params, key); }));
     } catch (error) {}
     return result;
   }

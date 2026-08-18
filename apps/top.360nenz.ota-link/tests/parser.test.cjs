@@ -110,12 +110,16 @@ test('随 Tapp 打包的 SmartTool 快照与 HAR 目录统计一致', () => {
 test('区分固定链接和包含厂商过期签名的动态链接', () => {
   assert.deepEqual(linkTiming('https://example.com/a.zip'), { dynamic: false, expiresAt: '' })
   assert.deepEqual(linkTiming('https://example.com/a.zip?Expires=1893456000&Signature=x'), { dynamic: true, expiresAt: '2030-01-01T00:00:00.000Z' })
+  assert.deepEqual(linkTiming('https://firmware-res.flyme.com/a.zip?auth_key=1893456000-0-0-deadbeef'), { dynamic: true, expiresAt: '2030-01-01T00:00:00.000Z' })
+  assert.deepEqual(linkTiming('https://s3.example/a.zip?X-Amz-Date=20300101T000000Z&X-Amz-Expires=600&X-Amz-Signature=x'), { dynamic: true, expiresAt: '2030-01-01T00:10:00.000Z' })
+  assert.deepEqual(linkTiming('https://example.com/a.zip?token=public-catalog-id'), { dynamic: false, expiresAt: '' })
 })
 
 test('自有 API 只短路固定链接，动态缓存继续走外部解析顺序', () => {
   assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip', dynamic: false }), true)
   assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip?sign=x', dynamic: true }), false)
   assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip?sign=x', dynamic: false }), false)
+  assert.equal(isFixedOwnRecord({ url: 'https://firmware-res.flyme.com/rom.zip?auth_key=1893456000-0-0-x', dynamic: false }), false)
   assert.equal(isFixedOwnRecord({ fixedUrl: 'https://cdn.example/rom.tgz' }), true)
   assert.equal(isFixedOwnRecord({ url: 'http://cdn.example/rom.zip', dynamic: false }), false)
 })
