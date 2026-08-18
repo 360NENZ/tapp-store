@@ -9,6 +9,8 @@
   var catalogReleases = [];
   var releaseById = {};
   var manualReleaseById = {};
+  var staticSmartCatalogPromise;
+  var STATIC_SMART_CATALOG = 'assets/smarttool-catalog.json';
   var SMART_BRANDS = { full: ['OPPO', 'OnePlus', 'Realme', 'Xiaomi', 'Redmi', '魅族'], afterSales: ['OPPO', 'OnePlus', 'Realme', 'Xiaomi', 'Redmi'] };
 
   function $(id) { return document.getElementById(id); }
@@ -99,6 +101,57 @@
     var value = unwrap(payload);
     var items = value && (value.items || value[key] || value.data || value);
     return Array.isArray(items) ? items : [];
+  }
+
+  async function loadStaticSmartCatalog() {
+    if (staticSmartCatalogPromise) return staticSmartCatalogPromise;
+    staticSmartCatalogPromise = (async function () {
+      try {
+        if (!Tapp.assets || typeof Tapp.assets.getArrayBuffer !== 'function') return null;
+        var asset = await Tapp.assets.getArrayBuffer(STATIC_SMART_CATALOG);
+        var buffer = asset && asset.buffer ? asset.buffer : asset;
+        if (!buffer) return null;
+        return JSON.parse(new TextDecoder().decode(buffer));
+      } catch (error) {
+        return null;
+      }
+    })();
+    return staticSmartCatalogPromise;
+  }
+
+  function staticSmartItemsFromCatalog(catalog, packageType, brand, series, device, kind) {
+    var packageNode = catalog && catalog.packages && catalog.packages[clean(packageType)];
+    var brandNode = packageNode && packageNode[clean(brand)];
+    var seriesNode = brandNode && brandNode.series && brandNode.series[clean(series)];
+    if (kind === 'series') return brandNode && brandNode.series ? Object.keys(brandNode.series) : [];
+    if (kind === 'devices') return seriesNode && seriesNode.devices ? Object.keys(seriesNode.devices) : [];
+    if (kind === 'versions') {
+      var versions = seriesNode && seriesNode.devices && seriesNode.devices[clean(device)];
+      return Array.isArray(versions) ? versions.map(function (version) { return { name: version }; }) : [];
+    }
+    return [];
+  }
+
+  async function staticSmartItems(packageType, brand, series, device, kind) {
+    return staticSmartItemsFromCatalog(await loadStaticSmartCatalog(), packageType, brand, series, device, kind);
+  }
+
+  async function smartLiveItems(apiName, params, key) {
+    if (apiName === 'violetSeries') return payloadItems(await Tapp.api('violetSeries', params), key);
+    if (apiName === 'violetDevices') return payloadItems(await Tapp.api('violetDevices', params), key);
+    if (apiName === 'violetVersions') return payloadItems(await Tapp.api('violetVersions', params), key);
+    throw new Error('不支持的 SmartTool 目录入口');
+  }
+
+  async function smartList(apiName, params, packageType, brand, series, device, kind, key) {
+    var cached = await staticSmartItems(packageType, brand, series, device, kind);
+    if (cached.length) return { items: cached, source: 'snapshot' };
+    try {
+      var live = await smartLiveItems(apiName, params, key);
+      return { items: live, source: live.length ? 'live' : 'empty' };
+    } catch (error) {
+      return { items: [], source: 'error' };
+    }
   }
 
   function applyTheme(theme) {
@@ -458,8 +511,9 @@
   async function smartLoadSeries() {
     fillSelect($('smart-series'), [], '正在加载系列…'); fillSelect($('smart-device'), [], '请先选择系列'); fillSelect($('smart-version'), [], '请先选择机型'); $('smart-resolve-btn').disabled = true;
     if (!$('smart-brand').value) return fillSelect($('smart-series'), [], '请先选择品牌');
-    try { var items = payloadItems(await Tapp.api('violetSeries', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value) }), 'series'); fillSelect($('smart-series'), items, items.length ? '请选择系列' : '没有可用系列', function (x) { return clean(x.name || x); }); }
-    catch (error) { fillSelect($('smart-series'), [], '系列加载失败'); await notify('无法加载 SmartTool 系列', 'error'); }
+    var result = await smartList('violetSeries', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value) }, $('smart-package').value, $('smart-brand').value, '', '', 'series', 'series');
+    fillSelect($('smart-series'), result.items, result.items.length ? '请选择系列' : '没有可用系列', function (x) { return clean(x.name || x); });
+    if (!result.items.length) await notify('静态快照和 SmartTool 均未返回系列', 'warning');
   }
 
   function smartPackageChanged() {
@@ -474,15 +528,17 @@
   async function smartLoadDevices() {
     fillSelect($('smart-device'), [], '正在加载机型…'); fillSelect($('smart-version'), [], '请先选择机型'); $('smart-resolve-btn').disabled = true;
     if (!$('smart-series').value) return fillSelect($('smart-device'), [], '请先选择系列');
-    try { var items = payloadItems(await Tapp.api('violetDevices', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value) }), 'devices'); fillSelect($('smart-device'), items, items.length ? '请选择机型' : '没有可用机型', function (x) { return fullDeviceName(clean(x.name || x).replace(/^\[[^\]]+\]/, '')); }); }
-    catch (error) { fillSelect($('smart-device'), [], '机型加载失败'); await notify('无法加载 SmartTool 机型', 'error'); }
+    var result = await smartList('violetDevices', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value) }, $('smart-package').value, $('smart-brand').value, $('smart-series').value, '', 'devices', 'devices');
+    fillSelect($('smart-device'), result.items, result.items.length ? '请选择机型' : '没有可用机型', function (x) { return fullDeviceName(clean(x.name || x).replace(/^\[[^\]]+\]/, '')); });
+    if (!result.items.length) await notify('静态快照和 SmartTool 均未返回机型', 'warning');
   }
 
   async function smartLoadVersions() {
     fillSelect($('smart-version'), [], '正在加载版本…'); $('smart-resolve-btn').disabled = true;
     if (!$('smart-device').value) return fillSelect($('smart-version'), [], '请先选择机型');
-    try { var items = payloadItems(await Tapp.api('violetVersions', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value), device: encode($('smart-device').value) }), 'versions'); fillSelect($('smart-version'), items, items.length ? '请选择固件版本' : '没有可用版本', function (x) { return clean(x.version || x.name || x); }); }
-    catch (error) { fillSelect($('smart-version'), [], '版本加载失败'); await notify('无法加载 SmartTool 版本', 'error'); }
+    var result = await smartList('violetVersions', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value), device: encode($('smart-device').value) }, $('smart-package').value, $('smart-brand').value, $('smart-series').value, $('smart-device').value, 'versions', 'versions');
+    fillSelect($('smart-version'), result.items, result.items.length ? '请选择固件版本' : '没有可用版本', function (x) { return clean(x.version || x.name || x); });
+    if (!result.items.length) await notify('静态快照和 SmartTool 均未返回版本', 'warning');
   }
 
   async function resolveSmart() {
@@ -671,7 +727,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, isFixedOwnRecord: isFixedOwnRecord, formatBytes: formatBytes };
+    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, isFixedOwnRecord: isFixedOwnRecord, formatBytes: formatBytes, staticSmartItemsFromCatalog: staticSmartItemsFromCatalog };
   }
   if (typeof window !== 'undefined' && (window._TAPP_MODE === 'page' || window._TAPP_HAS_HTML)) Tapp.lifecycle.onReady(init);
 })();

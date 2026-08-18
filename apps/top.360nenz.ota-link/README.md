@@ -21,6 +21,8 @@
 
 目录来自 [Daniel Springer OTA API](https://roms.danielspringer.at/api/ota.php?help=1)，这是第三方归档站，不是手机厂商官方目录。API 本身只返回 `source_url`，不会解析重定向或生成临时 CDN 链接。Tapp 的优先级为：自有 API 的固定链接 → 第三方归档站网页签名流程 → [VioletTool](https://violettool.top/rom-api) 动态解析 → 目录原始地址。对 OPlus 记录，归档站流程会取得短期 `k` 与 CSRF，再在同一个一次性 PHP 会话中请求 `resolve_json` 生成带签名直链；不会写死 Cookie、CSRF 或签名链接。VioletTool 的 SmartTool 同源接口会按 `series → devices → versions → download-link` 顺序查找，并将返回的厂商临时链接直接交给用户。
 
+SmartTool 下拉同时内置 `assets/smarttool-catalog.json` 快照（来自已保存的 HAR/目录采集，覆盖 2 种包型、11 个包型-品牌组合、59 个系列、998 个机型和 35,669 个版本）。打开 SmartTool 目录后，系列、机型和版本优先从快照生成，不依赖实时请求；快照没有的组合才尝试 VioletTool 实时接口。快照不会自动更新，重新采集后替换该资源并重新打包即可；任何目录缺口仍可切换到“手动查询”。
+
 厂商下载地址分为固定链接和带签名的短期动态链接。Tapp 会检查 URL 中的 `Expires`、`Signature`、`sign` 等参数：无签名的 ZIP/TGZ 可由自有 API 长期缓存；带签名结果只缓存到 `expiresAt`，过期后重新解析。服务限流、令牌过期或厂商接口异常时，页面会保留目录原始地址。下载和刷机均有风险，请核对型号、地区、MD5 与包类型。
 
 ### 自有 API（可选）
@@ -95,7 +97,7 @@ apps/top.360nenz.ota-link/dist/top.360nenz.ota-link.tapp
 7. 在手动模式按发布 ID 精确查询，确认只返回对应 OTA 记录。
 8. 复制下载链接，粘贴到文本框核对地址完整性。
 9. 对网页限流或厂商已失效的入口，确认页面显示橙色回退提示且仍可复制源地址。
-10. 点击“重新加载目录”，确认下拉选项会从第三方 OTA API 重新获取，而不是使用写死的 PHP 列表。
+10. 点击“重新加载目录”，确认普通目录下拉会从第三方 OTA API 重新获取；SmartTool 下拉会优先使用随包快照，快照缺失时才访问实时接口。快照更新时间以 API 目录采集文件中的 `updatedAt` 为准。
 11. 切换 Myriad 深色/浅色主题，确认页面颜色同步变化。
 12. 若测试自有 API，先请求 `/health` 确认 Worker 已绑定；返回站点 404 时属于尚未部署，不影响第三方解析路径。
 
@@ -126,6 +128,11 @@ Co-authored-by: 姓名 <邮箱>
 | `ui:openUrl` | 打开第三方 OTA API 文档 |
 
 ## 更新日志
+
+### v1.3.0 (2026-08-18)
+
+- 内置 SmartTool 全目录快照作为离线下拉源，快照缺失时再请求实时接口
+- 声明并打包 assets/smarttool-catalog.json，保留手动查询兜底
 
 ### v1.2.2 (2026-08-18)
 

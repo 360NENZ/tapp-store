@@ -1,10 +1,10 @@
 {
   "$schema": "https://myriad.you/schemas/tapp-store-v1.json",
   "name": "Myriad Official Tapp Store",
-  "version": "1.0.38",
+  "version": "1.0.39",
   "api_version": "2",
   "base_url": "https://raw.githubusercontent.com/Myriad-You/tapp-store/main",
-  "updated_at": "2026-08-18T09:53:58.676Z",
+  "updated_at": "2026-08-18T11:12:34.442Z",
   "maintainer": {
     "name": "Myriad Team",
     "email": "tapp@myriad.you",
@@ -1617,9 +1617,9 @@
     {
       "id": "top.360nenz.ota-link",
       "name": "OTA 包链接解析器",
-      "version": "1.2.2",
-      "description": "查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
-      "long_description": "用于查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA 目录的中文工具。采用设备、地区、固件版本三级联动下拉选择，并提供 SmartTool 包类型五级目录和手动查询兜底；优先读取自有 API 固定链接，随后尝试第三方 OTA 归档站与 VioletTool 动态解析，最后保留目录原始地址。1.2.2 同时区分固定与动态链接并优化移动端排版；自有 API 尚需单独部署 Worker。",
+      "version": "1.3.0",
+      "description": "离线快照下拉查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
+      "long_description": "用于查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA 目录的中文工具。采用设备、地区、固件版本三级联动下拉选择，并提供 SmartTool 包类型五级目录和手动查询兜底；优先读取自有 API 固定链接，随后尝试第三方 OTA 归档站与 VioletTool 动态解析，最后保留目录原始地址。1.3.0 内置 SmartTool 目录快照，在无网络时也能完成系列、机型和版本下拉；同时区分固定与动态链接并优化移动端排版；自有 API 尚需单独部署 Worker。",
       "author": {
         "name": "360NENZ | AstralTz",
         "url": "https://github.com/360NENZ"
@@ -1671,13 +1671,13 @@
         "page_styles": "apps/top.360nenz.ota-link/page.css",
         "page_template": "apps/top.360nenz.ota-link/page.html"
       },
-      "size": 67104,
+      "size": 2387025,
       "downloads": 0,
       "rating": 0,
       "featured": false,
       "verified": false,
       "created_at": "2026-08-17T14:05:30.034Z",
-      "updated_at": "2026-08-18T08:30:12.128Z"
+      "updated_at": "2026-08-18T11:12:34.440Z"
     }
   ],
   "last_updated": "2026-08-04T09:47:35Z"

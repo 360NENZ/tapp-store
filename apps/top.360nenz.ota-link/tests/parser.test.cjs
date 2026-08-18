@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const test = require('node:test')
 const fs = require('node:fs')
 const path = require('node:path')
-const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, isFixedOwnRecord, formatBytes } = require('../main.js')
+const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, isFixedOwnRecord, formatBytes, staticSmartItemsFromCatalog } = require('../main.js')
 
 test('按设备和地区构建三级目录并将新版本排在前面', () => {
   const oldRelease = { id: 'old', device: 'OP 13', region: 'EU', version: '1.0', build_timestamp: '2026-01-01T00:00:00' }
@@ -91,6 +91,20 @@ test('HAR 快照覆盖两种包型、六个品牌和 SmartTool 关键入口', ()
   assert.equal(snapshot.endpointCounts.devices, 60)
   assert.equal(snapshot.endpointCounts.versions, 57)
   assert.ok(snapshot.packages.full.OnePlus.series['数字系列'].devices['[C16动态解析]OnePlus 15'])
+})
+
+test('随 Tapp 打包的 SmartTool 快照与 HAR 目录统计一致', () => {
+  const snapshot = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'assets', 'smarttool-catalog.json'), 'utf8'))
+  assert.deepEqual(Object.keys(snapshot.packages).sort(), ['afterSales', 'full'])
+  assert.equal(snapshot.summary.versions, 35669)
+  assert.equal(snapshot.summary.devices, 998)
+  assert.equal(snapshot.summary.series, 59)
+  const series = staticSmartItemsFromCatalog(snapshot, 'full', 'OnePlus', '', '', 'series')
+  const devices = staticSmartItemsFromCatalog(snapshot, 'full', 'OnePlus', '数字系列', '', 'devices')
+  const versions = staticSmartItemsFromCatalog(snapshot, 'full', 'OnePlus', '数字系列', '[C16动态解析]OnePlus 15', 'versions')
+  assert.ok(series.includes('数字系列'))
+  assert.ok(devices.includes('[C16动态解析]OnePlus 15'))
+  assert.ok(versions.some((item) => item.name === 'PLK110_16.0.3.502(CN01)'))
 })
 
 test('区分固定链接和包含厂商过期签名的动态链接', () => {
