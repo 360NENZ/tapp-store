@@ -2,7 +2,7 @@ const assert = require('node:assert/strict')
 const test = require('node:test')
 const fs = require('node:fs')
 const path = require('node:path')
-const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, formatBytes } = require('../main.js')
+const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, findArchiveRelease, fullDeviceName, normalizedDeviceName, violetParams, linkTiming, isFixedOwnRecord, formatBytes } = require('../main.js')
 
 test('按设备和地区构建三级目录并将新版本排在前面', () => {
   const oldRelease = { id: 'old', device: 'OP 13', region: 'EU', version: '1.0', build_timestamp: '2026-01-01T00:00:00' }
@@ -89,4 +89,11 @@ test('HAR 快照覆盖两种包型、六个品牌和 SmartTool 关键入口', ()
 test('区分固定链接和包含厂商过期签名的动态链接', () => {
   assert.deepEqual(linkTiming('https://example.com/a.zip'), { dynamic: false, expiresAt: '' })
   assert.deepEqual(linkTiming('https://example.com/a.zip?Expires=1893456000&Signature=x'), { dynamic: true, expiresAt: '2030-01-01T00:00:00.000Z' })
+})
+
+test('自有 API 只短路固定链接，动态缓存继续走外部解析顺序', () => {
+  assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip', dynamic: false }), true)
+  assert.equal(isFixedOwnRecord({ url: 'https://cdn.example/rom.zip?sign=x', dynamic: true }), false)
+  assert.equal(isFixedOwnRecord({ fixedUrl: 'https://cdn.example/rom.tgz' }), true)
+  assert.equal(isFixedOwnRecord({ url: 'http://cdn.example/rom.zip', dynamic: false }), false)
 })

@@ -19,15 +19,15 @@
 
 ## 数据来源与限制
 
-目录来自 [Daniel Springer OTA API](https://roms.danielspringer.at/api/ota.php?help=1)，这是第三方归档站，不是手机厂商官方目录。API 本身只返回 `source_url`，不会解析重定向或生成临时 CDN 链接。Tapp 的优先级为：自有 API 的固定/短期缓存 → 第三方归档站网页签名流程 → [VioletTool](https://violettool.top/rom-api) 动态解析 → 目录原始地址。对 OPlus 记录，归档站流程会取得短期 `k` 与 CSRF，再在同一个一次性 PHP 会话中请求 `resolve_json` 生成带签名直链；不会写死 Cookie、CSRF 或签名链接。VioletTool 的 SmartTool 同源接口会按 `series → devices → versions → download-link` 顺序查找，并将返回的厂商临时链接直接交给用户。
+目录来自 [Daniel Springer OTA API](https://roms.danielspringer.at/api/ota.php?help=1)，这是第三方归档站，不是手机厂商官方目录。API 本身只返回 `source_url`，不会解析重定向或生成临时 CDN 链接。Tapp 的优先级为：自有 API 的固定链接 → 第三方归档站网页签名流程 → [VioletTool](https://violettool.top/rom-api) 动态解析 → 目录原始地址。对 OPlus 记录，归档站流程会取得短期 `k` 与 CSRF，再在同一个一次性 PHP 会话中请求 `resolve_json` 生成带签名直链；不会写死 Cookie、CSRF 或签名链接。VioletTool 的 SmartTool 同源接口会按 `series → devices → versions → download-link` 顺序查找，并将返回的厂商临时链接直接交给用户。
 
 厂商下载地址分为固定链接和带签名的短期动态链接。Tapp 会检查 URL 中的 `Expires`、`Signature`、`sign` 等参数：无签名的 ZIP/TGZ 可由自有 API 长期缓存；带签名结果只缓存到 `expiresAt`，过期后重新解析。服务限流、令牌过期或厂商接口异常时，页面会保留目录原始地址。下载和刷机均有风险，请核对型号、地区、MD5 与包类型。
 
 ### 自有 API（可选）
 
-Tapp 会先请求独立的 `https://ota-api.360nenz.top/api/ota/resolve`。对应服务源码放在 `D:\WorkSpace\Git\ota-link-api`，与 Myriad 商店统计 Worker 分开部署，并使用独立的 `OTA_LINKS` KV 保存记录：永久稳定地址设置 `dynamic=false`；带厂商签名的短期地址必须填写 `expiresAt`，过期后接口返回 410，Tapp 自动继续走第三方来源。缓存身份包含地区和发布 ID，接口未部署或返回 404 不影响正常解析。
+Tapp 会先请求独立的 `https://ota-api.360nenz.top/api/ota/resolve`。对应服务源码放在 `D:\WorkSpace\Git\ota-link-api`，与 Myriad 商店统计 Worker 分开部署，并使用独立的 `OTA_LINKS` KV 保存记录：只有永久稳定地址才会被 Tapp 直接采用（`dynamic=false`）；带厂商签名的短期地址即使仍在 API 中可读，也会由 Tapp 继续走第三方解析顺序，避免把缓存误当成长期直链。缓存身份包含地区和发布 ID，接口未部署或返回 404 不影响正常解析。
 
-同一包版本可在自有 API 中同时保存 `archive` 与 `violettool` 两处来源。API 优先返回未过期的固定链接，其他可用链接放在 `alternatives`；Tapp 未命中自有 API 时，严格按“Daniel Springer 第三方归档站 → VioletTool → 厂商入口/目录原始地址”继续解析。
+同一包版本可在自有 API 中同时保存 `archive` 与 `violettool` 两处来源。API 优先返回未过期的固定链接，其他可用链接放在 `alternatives`；Tapp 仅在首条结果为固定 HTTPS 链接时短路，否则严格按“Daniel Springer 第三方归档站 → VioletTool → 厂商入口/目录原始地址”继续解析。
 
 ### SmartTool 目录采集证据
 
@@ -125,6 +125,11 @@ Co-authored-by: 姓名 <邮箱>
 | `ui:openUrl` | 打开第三方 OTA API 文档 |
 
 ## 更新日志
+
+### v1.2.1 (2026-08-18)
+
+- 自有 API 仅对固定 HTTPS 链接短路，动态缓存继续按第三方解析顺序刷新
+- 补齐 `.bin`、`.img`、`.7z`、`.rar` 等 OTA 包识别，并收敛工具界面和移动端排版
 
 ### v1.2.0 (2026-08-18)
 

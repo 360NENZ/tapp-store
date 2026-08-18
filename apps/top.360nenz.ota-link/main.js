@@ -27,6 +27,10 @@
     return ({ fixed: '自有 API 固定地址', archive: '第三方 OTA 归档站', violettool: 'VioletTool 动态解析', vendor: '厂商接口', manual: '目录原始地址' })[source] || source || '目录原始地址';
   }
 
+  function isFixedOwnRecord(record) {
+    return Boolean(record && !record.dynamic && /^https:\/\//i.test(clean(record.url || record.fixedUrl)));
+  }
+
   function linkTiming(url) {
     var result = { dynamic: false, expiresAt: '' };
     try {
@@ -305,10 +309,10 @@
       var ownParams = violetParams(release);
       var own = unwrap(await Tapp.api('otaOwnResolve', { brand: encode(ownParams.brand), packageType: encode(ownParams.packageType), series: encode(ownParams.series), device: encode(release.device), version: encode(release.version), region: encode(release.region), id: encode(release.id) }));
       var ownUrl = own && (own.url || own.fixedUrl);
-      if (ownUrl && /^https:\/\//i.test(clean(ownUrl))) return { url: clean(ownUrl), resolved: true, source: 'fixed', dynamic: Boolean(own.dynamic), expiresAt: own.expiresAt || '', note: sourceLabel('fixed') + (own.dynamic ? '（短期缓存）' : '') };
+      if (isFixedOwnRecord(own)) return { url: clean(ownUrl), resolved: true, source: 'fixed', dynamic: false, expiresAt: own.expiresAt || '', note: sourceLabel('fixed') };
     } catch (error) {}
     if (!source) return { url: '', resolved: false, note: '目录未提供源地址' };
-    if (/\.(zip|ozip|bin|tgz|gz|img)(\?|$)/i.test(source)) {
+    if (/\.(zip|ozip|bin|tgz|gz|img|7z|rar|tar\.gz)(?:[?#]|$)/i.test(source)) {
       return { url: source, resolved: true, source: 'vendor', note: '目录已提供直接下载链接' };
     }
     var parsed;
@@ -484,7 +488,7 @@
       var result;
       try {
         var own = unwrap(await Tapp.api('otaOwnResolve', { brand: encode(ownParams.brand), packageType: encode(ownParams.packageType), series: encode(ownParams.series), device: encode(release.device), version: encode(release.version), region: '', id: '' }));
-        if (own && /^https:\/\//i.test(clean(own.url || own.fixedUrl))) result = { url: clean(own.url || own.fixedUrl), resolved: true, source: 'fixed', dynamic: Boolean(own.dynamic), expiresAt: own.expiresAt || '', note: '自有 API 已命中' };
+        if (isFixedOwnRecord(own)) result = { url: clean(own.url || own.fixedUrl), resolved: true, source: 'fixed', dynamic: false, expiresAt: own.expiresAt || '', note: '自有 API 已命中固定链接' };
       } catch (error) {}
       if (!result) {
         var archiveRelease = findArchiveRelease(release, catalogReleases);
@@ -662,7 +666,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, formatBytes: formatBytes };
+    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, findArchiveRelease: findArchiveRelease, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, linkTiming: linkTiming, isFixedOwnRecord: isFixedOwnRecord, formatBytes: formatBytes };
   }
   if (typeof window !== 'undefined' && (window._TAPP_MODE === 'page' || window._TAPP_HAS_HTML)) Tapp.lifecycle.onReady(init);
 })();
