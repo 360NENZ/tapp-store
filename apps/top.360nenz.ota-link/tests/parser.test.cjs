@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, fullDeviceName, formatBytes } = require('../main.js')
+const { buildCatalog, collectUrls, pickDownloadUrl, parseArchiveTokens, archiveVersionIndex, fullDeviceName, normalizedDeviceName, violetParams, formatBytes } = require('../main.js')
 
 test('按设备和地区构建三级目录并将新版本排在前面', () => {
   const oldRelease = { id: 'old', device: 'OP 13', region: 'EU', version: '1.0', build_timestamp: '2026-01-01T00:00:00' }
@@ -52,4 +52,15 @@ test('按网页中的新版本优先顺序计算版本序号', () => {
 test('界面将 OP 设备简称展开为 OnePlus 全称', () => {
   assert.equal(fullDeviceName('OP 15'), 'OnePlus 15')
   assert.equal(fullDeviceName('OPPO FIND X8 PRO'), 'OPPO FIND X8 PRO')
+})
+
+test('匹配 SmartTool 的 C16 设备名称并推断 OnePlus 数字系列', () => {
+  assert.equal(normalizedDeviceName('[C16动态解析]OnePlus 15'), normalizedDeviceName('OP 15'))
+  assert.deepEqual(violetParams({ device: 'OP 15', version: 'PLK110_16.0.3.502(CN01)' }), {
+    packageType: 'full',
+    brand: 'OnePlus',
+    series: '数字系列',
+    device: 'OP 15',
+    version: 'PLK110_16.0.3.502(CN01)'
+  })
 })

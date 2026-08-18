@@ -2,7 +2,7 @@
 .dark{color-scheme:dark;--bg:#0c1320;--panel:#141d2c;--text:#eef4ff;--muted:#9caabe;--line:#2d3a4f;--primary:#60a5fa;--primary-soft:#172d50;--soft:#1b2638;--success:#4ade80;--warning:#fbbf24;--shadow:0 20px 45px rgba(0,0,0,.24)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:radial-gradient(circle at 80% 0,rgba(37,99,235,.12),transparent 34%),var(--bg);color:var(--text);font:14px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{margin:0;background:radial-gradient(circle at 80% 0,rgba(37,99,235,.12),transparent 34%),var(--bg);color:var(--text);font:14px/1.55 "MiSans","HarmonyOS Sans SC","Microsoft YaHei UI",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 .shell{max-width:1180px;margin:0 auto;padding:40px 24px 64px}
 .hero{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
 .eyebrow{margin:0 0 8px;color:var(--primary);font-size:11px;font-weight:800;letter-spacing:.18em}
@@ -26,6 +26,7 @@ select:disabled{cursor:not-allowed;opacity:.62;background:var(--soft)}
 .mode-switch{display:inline-flex;padding:4px;margin-bottom:16px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .mode-switch .mode-btn{min-height:34px;padding:6px 13px;border:0;background:transparent}.mode-switch .mode-btn.active{background:var(--panel);color:var(--primary);box-shadow:0 2px 8px rgba(15,23,42,.08)}
 .manual-fields{grid-template-columns:repeat(4,minmax(0,1fr))}.manual-match{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px;margin-top:14px}.manual-match button{min-height:48px}
+.smart-fields{grid-template-columns:repeat(5,minmax(0,1fr))}
 .actions,.card-actions{display:flex;flex-wrap:wrap;gap:9px}.actions{margin-top:18px}
 button{min-height:40px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--text);cursor:pointer;font-weight:700}
 button:hover{border-color:var(--primary)}button.primary{border-color:var(--primary);background:var(--primary);color:#fff}button.ghost{background:transparent}button:disabled{cursor:wait;opacity:.62}
@@ -37,8 +38,9 @@ button:hover{border-color:var(--primary)}button.primary{border-color:var(--prima
 .region,.latest-badge{padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800}.region{background:var(--soft);color:var(--muted)}.latest-badge{background:var(--primary-soft);color:var(--primary)}
 .release-card h3{margin:13px 0 4px;font-size:19px}.ota-version{margin:0;color:var(--muted);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;overflow-wrap:anywhere}
 .release-card dl{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin:17px 0}.release-card dl div{min-width:0}.release-card dt{color:var(--muted);font-size:11px}.release-card dd{margin:2px 0 0;font-weight:650;overflow-wrap:anywhere}
-.link-box{padding:12px;border-radius:12px;background:var(--soft)}.link-label{display:block;margin-bottom:5px;color:var(--muted);font-size:11px}
+.link-box{padding:12px;border:1px solid color-mix(in srgb,var(--line) 72%,transparent);border-radius:12px;background:var(--soft)}.link-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}.link-label{color:var(--muted);font-size:11px}.source-badge{padding:2px 7px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:10px;font-weight:800}
 .download-url{display:-webkit-box;overflow:hidden;color:var(--primary);font-size:12px;overflow-wrap:anywhere;-webkit-line-clamp:3;-webkit-box-orient:vertical}.resolve-note{display:block;margin-top:7px;color:var(--success)}.resolve-note.fallback{color:var(--warning)}
 .card-actions{margin-top:13px}
+@media(max-width:1000px){.smart-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:860px){.fields{grid-template-columns:repeat(2,minmax(0,1fr))}.results{grid-template-columns:1fr}}
 @media(max-width:580px){.shell{padding:26px 15px 44px}.hero{flex-direction:column}.fields{grid-template-columns:1fr}.manual-match{grid-template-columns:1fr}.section-title{align-items:flex-start;flex-direction:column}.release-card dl{grid-template-columns:1fr}.card-actions button{flex:1}}

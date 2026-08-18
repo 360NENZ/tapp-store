@@ -22,6 +22,14 @@
     return /^OP(?:\s|$)/i.test(device) ? device.replace(/^OP(?=\s|$)/i, 'OnePlus') : device;
   }
 
+  function sourceLabel(source) {
+    return ({ fixed: '自有 API 固定地址', archive: '第三方 OTA 归档站', violettool: 'VioletTool 动态解析', vendor: '厂商接口', manual: '目录原始地址' })[source] || source || '目录原始地址';
+  }
+
+  function normalizedDeviceName(value) {
+    return fullDeviceName(clean(value).replace(/^\[[^\]]+\]/, '')).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '');
+  }
+
   function naturalCompare(a, b) {
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
   }
@@ -61,12 +69,18 @@
     select.appendChild(empty);
     values.forEach(function (value) {
       var option = document.createElement('option');
-      option.value = typeof value === 'string' ? value : value.id;
+      option.value = typeof value === 'string' ? value : clean(value.id || value.value || value.name || value.device || value.version);
       option.textContent = labeler ? labeler(value) : value;
       select.appendChild(option);
     });
     select.disabled = values.length === 0;
     select.value = '';
+  }
+
+  function payloadItems(payload, key) {
+    var value = unwrap(payload);
+    var items = value && (value.items || value[key] || value.data || value);
+    return Array.isArray(items) ? items : [];
   }
 
   function applyTheme(theme) {
@@ -212,23 +226,85 @@
     throw new Error('不支持的厂商解析入口');
   }
 
+  function violetParams(release) {
+    var deviceName = String(release.device || '');
+    var lower = deviceName.toLowerCase();
+    var brand = clean(release.brand);
+    if (!brand) {
+      if (/oppo|find|reno|a9|a5|pad 3/i.test(deviceName)) brand = 'OPPO';
+      else if (/realme|真我|gt neo|gt7/i.test(deviceName)) brand = 'Realme';
+      else if (/redmi/i.test(deviceName)) brand = 'Redmi';
+      else if (/xiaomi|小米|civi|mix/i.test(deviceName)) brand = 'Xiaomi';
+      else if (/魅族|meizu/i.test(deviceName)) brand = '魅族';
+      else brand = 'OnePlus';
+    }
+    var series = clean(release.series);
+    if (!series && brand === 'OnePlus') series = /pad/i.test(lower) ? 'Pad系列' : /ace/i.test(lower) ? 'ACE系列' : /turbo/i.test(lower) ? 'Turbo系列' : '数字系列';
+    return {
+      packageType: clean(release.package_type || release.packageType) || 'full',
+      brand: brand,
+      series: series,
+      device: clean(release.device),
+      version: clean(release.version)
+    };
+  }
+
+  async function resolveViaVioletTool(release) {
+    var p = violetParams(release);
+    var series = p.series;
+    if (!series) {
+      var seriesPayload = unwrap(await Tapp.api('violetSeries', { packageType: encode(p.packageType), brand: encode(p.brand) }));
+      var seriesList = seriesPayload && (seriesPayload.items || seriesPayload.series || seriesPayload.data || seriesPayload);
+      if (Array.isArray(seriesList)) series = seriesList.find(function (x) { return clean(x.name || x) === clean(release.series); });
+      series = typeof series === 'string' ? series : clean(release.series);
+    }
+    if (!series) throw new Error('VioletTool 未确定设备系列');
+    var devicePayload = unwrap(await Tapp.api('violetDevices', { packageType: encode(p.packageType), brand: encode(p.brand), series: encode(series) }));
+    var deviceList = devicePayload && (devicePayload.items || devicePayload.devices || devicePayload.data || devicePayload);
+    var dynamicDevice = clean(release.device);
+    if (Array.isArray(deviceList)) {
+      var match = deviceList.find(function (x) { return normalizedDeviceName(x.name || x.device || x) === normalizedDeviceName(dynamicDevice); });
+      if (match) dynamicDevice = clean(match.name || match.device || match);
+    }
+    var versionPayload = unwrap(await Tapp.api('violetVersions', { packageType: encode(p.packageType), brand: encode(p.brand), series: encode(series), device: encode(dynamicDevice) }));
+    var versions = versionPayload && (versionPayload.items || versionPayload.versions || versionPayload.data || versionPayload);
+    if (Array.isArray(versions) && versions.length && !versions.some(function (x) { return clean(x.version || x) === p.version; })) throw new Error('VioletTool 未收录该版本');
+    var payload = unwrap(await Tapp.api('violetDownload', { packageType: p.packageType, brand: p.brand, series: series, device: dynamicDevice, version: p.version }));
+    var resolved = pickDownloadUrl(payload, release);
+    if (!resolved) throw new Error(payload && (payload.errorMessage || payload.message) || 'VioletTool 未返回下载链接');
+    return resolved;
+  }
+
   async function resolveRelease(release) {
     var source = clean(release.source_url);
+    try {
+      var ownParams = violetParams(release);
+      var own = unwrap(await Tapp.api('otaOwnResolve', { brand: encode(ownParams.brand), packageType: encode(ownParams.packageType), series: encode(ownParams.series), device: encode(release.device), version: encode(release.version), id: encode(release.id) }));
+      var ownUrl = own && (own.url || own.fixedUrl);
+      if (ownUrl && /^https:\/\//i.test(clean(ownUrl))) return { url: clean(ownUrl), resolved: true, source: 'fixed', dynamic: Boolean(own.dynamic), expiresAt: own.expiresAt || '', note: sourceLabel('fixed') + (own.dynamic ? '（短期缓存）' : '') };
+    } catch (error) {}
     if (!source) return { url: '', resolved: false, note: '目录未提供源地址' };
     if (/\.(zip|ozip|bin|tgz|gz|img)(\?|$)/i.test(source)) {
-      return { url: source, resolved: true, note: '目录已提供直接下载链接' };
+      return { url: source, resolved: true, source: 'vendor', note: '目录已提供直接下载链接' };
     }
     var parsed;
     try { parsed = new URL(source); } catch (error) {
       return { url: source, resolved: false, note: '源地址格式无法识别' };
     }
     var apiName = RESOLVER_BY_HOST[parsed.hostname.toLowerCase()];
-    if (!apiName) return { url: source, resolved: false, note: '暂不支持解析该厂商入口，已保留源地址' };
+    if (!apiName) {
+      try {
+        var violetUnknown = await resolveViaVioletTool(release);
+        return { url: violetUnknown, resolved: true, source: 'violettool', dynamic: true, note: '目录入口未匹配，已由 VioletTool 生成临时下载链接（过期后请重新解析）' };
+      } catch (unknownError) {
+        return { url: source, resolved: false, source: 'manual', note: '未匹配第三方解析入口，已回退到目录原始地址' };
+      }
+    }
     var archiveError = '';
     if (/^resolveOplus/.test(apiName)) {
       try {
         var signed = await resolveViaArchive(release);
-        return { url: signed, resolved: true, note: '已通过 OTA 网页生成带签名的临时下载直链' };
+        return { url: signed, resolved: true, source: 'archive', dynamic: true, note: '已通过 Daniel Springer 第三方归档站生成带签名的临时下载直链（过期后请重新解析）' };
       } catch (error) {
         archiveError = error && error.message ? error.message : String(error);
       }
@@ -236,11 +312,21 @@
     try {
       var payload = unwrap(await callResolver(apiName, parsed.search.slice(1)));
       var resolved = pickDownloadUrl(payload, release);
-      if (resolved) return { url: resolved, resolved: true, note: '已从厂商响应提取固件包地址' };
+      if (resolved) return { url: resolved, resolved: true, source: 'vendor', note: '已从厂商响应提取固件包地址' };
       var errorCode = payload && (payload.errMsg || payload.responseCode || payload.code);
-      return { url: source, resolved: false, note: (archiveError ? '网页签名服务暂不可用；' : '') + '厂商入口暂未返回下载链接' + (errorCode ? '（代码 ' + errorCode + '）' : '') };
+      try {
+        var violetAfterEmpty = await resolveViaVioletTool(release);
+        return { url: violetAfterEmpty, resolved: true, source: 'violettool', dynamic: true, note: '第三方归档站未返回结果，已由 VioletTool 生成临时下载链接（过期后请重新解析）' };
+      } catch (violetEmptyError) {
+        return { url: source, resolved: false, source: 'manual', note: (archiveError ? '归档站签名服务暂不可用；' : '') + '第三方归档站与 VioletTool 均未返回链接' + (errorCode ? '（代码 ' + errorCode + '）' : '') + '，已回退到目录原始地址' };
+      }
     } catch (error) {
-      return { url: source, resolved: false, note: (archiveError ? '网页签名服务暂不可用；' : '') + '解析请求失败，已回退到官方源地址' };
+      try {
+        var violet = await resolveViaVioletTool(release);
+        return { url: violet, resolved: true, source: 'violettool', dynamic: true, note: '归档站解析失败，已由 VioletTool 生成临时下载链接（过期后请重新解析）' };
+      } catch (violetError) {
+        return { url: source, resolved: false, source: 'manual', note: (archiveError ? '归档站签名服务暂不可用；' : '') + '第三方归档站与 VioletTool 均未返回链接，已回退到目录原始地址' };
+      }
     }
   }
 
@@ -265,9 +351,10 @@
     text(card.querySelector('.md5'), release.md5);
     text(card.querySelector('.release-id-value'), release.id);
     card.querySelector('.latest-badge').hidden = !release.is_latest;
+    text(card.querySelector('.source-badge'), sourceLabel(link.source));
     text(card.querySelector('.download-url'), link.url, '无可用地址');
     var note = card.querySelector('.resolve-note');
-    text(note, link.note);
+    text(note, (link.source ? sourceLabel(link.source) + ' · ' : '') + link.note);
     note.classList.toggle('fallback', !link.resolved);
     card.querySelector('.copy-btn').disabled = !link.url;
     card.querySelector('.copy-btn').onclick = function () { copy(link.url, '下载链接'); };
@@ -308,15 +395,48 @@
 
   function setMode(mode) {
     var manual = mode === 'manual';
-    $('catalog-mode-btn').classList.toggle('active', !manual);
+    var smart = mode === 'smart';
+    $('catalog-mode-btn').classList.toggle('active', !manual && !smart);
+    $('smart-mode-btn').classList.toggle('active', smart);
     $('manual-mode-btn').classList.toggle('active', manual);
-    $('catalog-fields').hidden = manual;
-    $('catalog-actions').hidden = manual;
+    $('catalog-fields').hidden = manual || smart;
+    $('catalog-actions').hidden = manual || smart;
+    $('smart-fields').hidden = !smart;
+    $('smart-actions').hidden = !smart;
     $('manual-fields').hidden = !manual;
     $('manual-actions').hidden = !manual;
     $('status').className = 'status';
-    $('status').textContent = manual ? '手动输入至少一个主要条件，再查询匹配版本' : '请选择设备、地区和固件版本';
-    resetResults(manual ? '手动查询后选择匹配版本。' : '依次选择设备、地区和固件版本。');
+    $('status').textContent = manual ? '手动输入至少一个主要条件，再查询匹配版本' : smart ? '请选择包类型、品牌、系列、机型和版本' : '请选择设备、地区和固件版本';
+    resetResults(manual ? '手动查询后选择匹配版本。' : smart ? 'SmartTool 目录实时来自 VioletTool。' : '依次选择设备、地区和固件版本。');
+  }
+
+  async function smartLoadSeries() {
+    fillSelect($('smart-series'), [], '正在加载系列…'); fillSelect($('smart-device'), [], '请先选择系列'); fillSelect($('smart-version'), [], '请先选择机型'); $('smart-resolve-btn').disabled = true;
+    if (!$('smart-brand').value) return fillSelect($('smart-series'), [], '请先选择品牌');
+    try { var items = payloadItems(await Tapp.api('violetSeries', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value) }), 'series'); fillSelect($('smart-series'), items, items.length ? '请选择系列' : '没有可用系列', function (x) { return clean(x.name || x); }); }
+    catch (error) { fillSelect($('smart-series'), [], '系列加载失败'); await notify('无法加载 SmartTool 系列', 'error'); }
+  }
+
+  async function smartLoadDevices() {
+    fillSelect($('smart-device'), [], '正在加载机型…'); fillSelect($('smart-version'), [], '请先选择机型'); $('smart-resolve-btn').disabled = true;
+    if (!$('smart-series').value) return fillSelect($('smart-device'), [], '请先选择系列');
+    try { var items = payloadItems(await Tapp.api('violetDevices', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value) }), 'devices'); fillSelect($('smart-device'), items, items.length ? '请选择机型' : '没有可用机型', function (x) { return fullDeviceName(clean(x.name || x).replace(/^\[[^\]]+\]/, '')); }); }
+    catch (error) { fillSelect($('smart-device'), [], '机型加载失败'); await notify('无法加载 SmartTool 机型', 'error'); }
+  }
+
+  async function smartLoadVersions() {
+    fillSelect($('smart-version'), [], '正在加载版本…'); $('smart-resolve-btn').disabled = true;
+    if (!$('smart-device').value) return fillSelect($('smart-version'), [], '请先选择机型');
+    try { var items = payloadItems(await Tapp.api('violetVersions', { packageType: encode($('smart-package').value), brand: encode($('smart-brand').value), series: encode($('smart-series').value), device: encode($('smart-device').value) }), 'versions'); fillSelect($('smart-version'), items, items.length ? '请选择固件版本' : '没有可用版本', function (x) { return clean(x.version || x); }); }
+    catch (error) { fillSelect($('smart-version'), [], '版本加载失败'); await notify('无法加载 SmartTool 版本', 'error'); }
+  }
+
+  async function resolveSmart() {
+    var release = { id: 'smarttool', brand: $('smart-brand').value, package_type: $('smart-package').value, series: $('smart-series').value, device: $('smart-device').value, version: $('smart-version').value, region: '—', source_url: 'https://violettool.top/rom-api' };
+    var button = $('smart-resolve-btn'); button.disabled = true; button.textContent = '正在解析…'; $('status').textContent = '正在请求自有缓存与 VioletTool…';
+    try { var ownParams = violetParams(release); var result; try { var own = unwrap(await Tapp.api('otaOwnResolve', { brand: encode(ownParams.brand), packageType: encode(ownParams.packageType), series: encode(ownParams.series), device: encode(release.device), version: encode(release.version), id: '' })); if (own && /^https:\/\//i.test(clean(own.url || own.fixedUrl))) result = { url: clean(own.url || own.fixedUrl), resolved: true, source: 'fixed', note: '自有 API 已命中' }; } catch (error) {} if (!result) result = { url: await resolveViaVioletTool(release), resolved: true, source: 'violettool', dynamic: true, note: '已生成厂商临时签名链接（过期后请重新解析）' }; $('results').replaceChildren(renderRelease(release, result)); $('status').className = 'status success'; $('status').textContent = 'SmartTool 下载链接解析完成'; }
+    catch (error) { $('status').className = 'status error'; $('status').textContent = 'SmartTool 解析失败：' + (error.message || error); await notify('无法解析 SmartTool 下载链接', 'error'); }
+    finally { button.disabled = false; button.textContent = '解析下载链接'; }
   }
 
   function manualParams() {
@@ -416,7 +536,7 @@
       var resolved = await resolveRelease(release);
       results.appendChild(renderRelease(release, resolved));
       status.className = 'status success';
-      status.textContent = resolved.resolved ? '下载链接解析完成' : '已返回官方源地址，请留意回退提示';
+      status.textContent = resolved.resolved ? '下载链接解析完成' : '已返回目录原始地址，请留意回退提示';
     } catch (error) {
       $('results').innerHTML = '<div class="empty"><b>解析失败</b><span>请稍后重试，或重新加载 OTA 目录。</span></div>';
       status.className = 'status error';
@@ -444,6 +564,14 @@
     $('manual-release').onchange = selectManualRelease;
     $('catalog-mode-btn').onclick = function () { setMode('catalog'); };
     $('manual-mode-btn').onclick = function () { setMode('manual'); };
+    $('smart-mode-btn').onclick = function () { setMode('smart'); };
+    $('smart-package').onchange = smartLoadSeries;
+    $('smart-brand').onchange = smartLoadSeries;
+    $('smart-series').onchange = smartLoadDevices;
+    $('smart-device').onchange = smartLoadVersions;
+    $('smart-version').onchange = function () { $('smart-resolve-btn').disabled = !$('smart-version').value; };
+    $('smart-resolve-btn').onclick = resolveSmart;
+    $('smart-clear-btn').onclick = function () { $('smart-brand').value = ''; fillSelect($('smart-series'), [], '请先选择品牌'); fillSelect($('smart-device'), [], '请先选择系列'); fillSelect($('smart-version'), [], '请先选择机型'); $('smart-resolve-btn').disabled = true; };
     $('clear-btn').onclick = function () {
       $('device').value = '';
       fillSelect($('region'), [], '请先选择设备');
@@ -471,7 +599,7 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, fullDeviceName: fullDeviceName, formatBytes: formatBytes };
+    module.exports = { buildCatalog: buildCatalog, collectUrls: collectUrls, scoreUrl: scoreUrl, pickDownloadUrl: pickDownloadUrl, parseArchiveTokens: parseArchiveTokens, archiveVersionIndex: archiveVersionIndex, fullDeviceName: fullDeviceName, normalizedDeviceName: normalizedDeviceName, violetParams: violetParams, formatBytes: formatBytes };
   }
   if (typeof window !== 'undefined' && (window._TAPP_MODE === 'page' || window._TAPP_HAS_HTML)) Tapp.lifecycle.onReady(init);
 })();

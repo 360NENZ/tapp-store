@@ -1,7 +1,7 @@
 {
   "id": "top.360nenz.ota-link",
   "name": "OTA 包链接解析器",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "minSystemVersion": "0.3.27",
   "description": "查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
   "category": "utility",
@@ -40,7 +40,7 @@
       "method": "GET",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "cacheTtl": 300,
       "description": "加载公开 OTA 目录与下拉选项"
@@ -52,7 +52,7 @@
       "method": "GET",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "cacheTtl": 60,
       "description": "按手动输入条件查询 OTA 目录"
@@ -68,7 +68,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "device": "{{params.device}}",
@@ -89,7 +89,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "k": "{{params.key}}",
@@ -97,6 +97,59 @@
       },
       "cacheTtl": 0,
       "description": "使用同一短期会话生成带签名的 OTA 下载直链"
+    },
+    "otaOwnResolve": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://ota-api.360nenz.top/api/ota/resolve?brand={{params.brand}}&packageType={{params.packageType}}&series={{params.series}}&device={{params.device}}&version={{params.version}}&id={{params.id}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0" },
+      "cacheTtl": 30,
+      "description": "优先读取自有 OTA 固定链接或短期缓存"
+    },
+    "violetSeries": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/series?packageType={{params.packageType}}&brand={{params.brand}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 300,
+      "description": "读取 VioletTool 系列目录"
+    },
+    "violetDevices": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/devices?packageType={{params.packageType}}&brand={{params.brand}}&series={{params.series}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 300,
+      "description": "读取 VioletTool 设备目录"
+    },
+    "violetVersions": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/versions?packageType={{params.packageType}}&brand={{params.brand}}&series={{params.series}}&device={{params.device}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json" },
+      "cacheTtl": 60,
+      "description": "确认 VioletTool 是否收录指定版本"
+    },
+    "violetDownload": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/download-link",
+      "method": "POST",
+      "bodyMode": "json",
+      "headers": { "Accept": "application/json", "Content-Type": "application/json" },
+      "body": {
+        "PackageType": "{{params.packageType}}",
+        "Brand": "{{params.brand}}",
+        "Series": "{{params.series}}",
+        "Device": "{{params.device}}",
+        "Version": "{{params.version}}"
+      },
+      "cacheTtl": 0,
+      "description": "调用 SmartTool 同源 VioletTool 生成动态下载链接"
     },
     "resolveOplusSg": {
       "type": "http",

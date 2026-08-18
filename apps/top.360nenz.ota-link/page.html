@@ -15,7 +15,15 @@
     </div>
     <div class="mode-switch" role="group" aria-label="筛选方式">
       <button id="catalog-mode-btn" class="mode-btn active" type="button">目录选择</button>
+      <button id="smart-mode-btn" class="mode-btn" type="button">SmartTool 目录</button>
       <button id="manual-mode-btn" class="mode-btn" type="button">手动查询</button>
+    </div>
+    <div id="smart-fields" class="fields smart-fields" hidden>
+      <label>包类型<select id="smart-package"><option value="full">全量包</option><option value="afterSales">售后包</option></select></label>
+      <label>品牌<select id="smart-brand"><option value="">请选择品牌</option><option>OPPO</option><option>OnePlus</option><option>Realme</option><option>Xiaomi</option><option>Redmi</option><option>魅族</option></select></label>
+      <label>系列<select id="smart-series" disabled><option value="">请先选择品牌</option></select></label>
+      <label>机型<select id="smart-device" disabled><option value="">请先选择系列</option></select></label>
+      <label>固件版本<select id="smart-version" disabled><option value="">请先选择机型</option></select></label>
     </div>
     <div id="catalog-fields" class="fields dropdown-fields">
       <label>设备
@@ -51,6 +59,10 @@
       <button id="manual-resolve-btn" class="primary" type="button" disabled>解析下载链接</button>
       <button id="manual-clear-btn" type="button">清空手动条件</button>
     </div>
+    <div id="smart-actions" class="actions" hidden>
+      <button id="smart-resolve-btn" class="primary" type="button" disabled>解析下载链接</button>
+      <button id="smart-clear-btn" type="button">重置选择</button>
+    </div>
     <p id="status" class="status">正在加载 OTA 目录…</p>
   </section>
 
@@ -81,7 +93,7 @@
         <div><dt>发布 ID</dt><dd class="release-id-value"></dd></div>
       </dl>
       <div class="link-box">
-        <span class="link-label">下载链接</span>
+        <div class="link-title"><span class="link-label">下载链接</span><span class="source-badge"></span></div>
         <code class="download-url"></code>
         <small class="resolve-note"></small>
       </div>

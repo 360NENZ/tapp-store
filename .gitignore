@@ -5,3 +5,6 @@ apps/com.myriad.video-prompt-generator/.DS_Store
 apps/.DS_Store
 .DS_Store
 node_modules/
+apps/top.360nenz.ota-link/dist/
+violettool.top_*.har
+*.tapp
