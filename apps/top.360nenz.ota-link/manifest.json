@@ -1,9 +1,9 @@
 {
   "id": "top.360nenz.ota-link",
   "name": "OTA 包链接解析器",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "minSystemVersion": "0.3.27",
-  "description": "查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO OTA，并解析固件包下载链接",
+  "description": "自有固定缓存优先，按 Daniel Springer 与 VioletTool 顺序解析 OnePlus、OPPO、Realme、小米、Redmi 与魅族 OTA",
   "category": "utility",
   "main": "main.js",
   "author": {
@@ -33,6 +33,53 @@
     }
   ],
   "apis": {
+    "fixedLink": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://ota-api.360nenz.top/api/ota/resolve?brand={{params.brandQuery}}&packageType={{params.packageTypeQuery}}&series={{params.seriesQuery}}&device={{params.deviceQuery}}&version={{params.versionQuery}}&region={{params.regionQuery}}&id={{params.idQuery}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)" },
+      "cacheTtl": 60,
+      "description": "优先读取自有 API 中的固定或仍有效的动态 OTA 链接"
+    },
+    "violetSeries": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/series?packageType={{params.packageTypeQuery}}&brand={{params.brandQuery}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)" },
+      "cacheTtl": 300,
+      "description": "按包类型和品牌加载 SmartTool 系列目录"
+    },
+    "violetDevices": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/devices?packageType={{params.packageTypeQuery}}&brand={{params.brandQuery}}&series={{params.seriesQuery}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)" },
+      "cacheTtl": 300,
+      "description": "按系列加载 SmartTool 机型目录"
+    },
+    "violetVersions": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/versions?packageType={{params.packageTypeQuery}}&brand={{params.brandQuery}}&series={{params.seriesQuery}}&device={{params.deviceQuery}}",
+      "method": "GET",
+      "headers": { "Accept": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)" },
+      "cacheTtl": 300,
+      "description": "按机型加载 SmartTool 版本目录"
+    },
+    "violetResolve": {
+      "type": "http",
+      "access": "public",
+      "endpoint": "https://violettool.top/rom-api/download-link",
+      "method": "POST",
+      "bodyMode": "json",
+      "headers": { "Accept": "application/json", "Content-Type": "application/json", "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)" },
+      "body": { "PackageType": "{{params.packageType}}", "Brand": "{{params.brand}}", "Series": "{{params.series}}", "Device": "{{params.device}}", "Version": "{{params.version}}" },
+      "cacheTtl": 0,
+      "description": "按 HAR 和 SmartTool 源码确认的下载链接解析接口"
+    },
     "otaCatalog": {
       "type": "http",
       "access": "public",
@@ -40,22 +87,10 @@
       "method": "GET",
       "headers": {
         "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "cacheTtl": 300,
       "description": "加载公开 OTA 目录与下拉选项"
-    },
-    "otaSearch": {
-      "type": "http",
-      "access": "public",
-      "endpoint": "https://roms.danielspringer.at/api/ota.php?device={{params.device}}&region={{params.region}}&model={{params.model}}&id={{params.id}}",
-      "method": "GET",
-      "headers": {
-        "Accept": "application/json",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
-      },
-      "cacheTtl": 60,
-      "description": "按手动输入条件查询 OTA 目录"
     },
     "prepareArchiveOta": {
       "type": "http",
@@ -68,7 +103,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "device": "{{params.device}}",
@@ -89,7 +124,7 @@
         "Cookie": "PHPSESSID={{params.sessionId}}",
         "Origin": "https://roms.danielspringer.at",
         "Referer": "https://roms.danielspringer.at/index.php?view=ota",
-        "User-Agent": "Myriad-OTA-Link/1.0.2 (https://github.com/360NENZ/tapp-store)"
+        "User-Agent": "Myriad-OTA-Link/1.1.0 (https://github.com/360NENZ/tapp-store)"
       },
       "body": {
         "k": "{{params.key}}",

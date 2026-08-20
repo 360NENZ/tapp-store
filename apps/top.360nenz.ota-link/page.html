@@ -3,82 +3,89 @@
     <div>
       <p class="eyebrow">OTA LINK RESOLVER</p>
       <h1>OTA 包链接解析器</h1>
-      <p class="lead">查询 OnePlus、OPPO、Realme、小米、Redmi 与 POCO 的公开 OTA 目录，并提取可用的固件包下载地址。</p>
+      <p class="lead">按包类型、品牌、系列、机型和版本逐级选择，优先命中自有 API 固定缓存，再生成可用的固件包下载地址。</p>
     </div>
-    <button id="docs-btn" class="ghost" type="button">API 文档</button>
+    <button id="docs-btn" class="ghost" type="button">查看 API 文档</button>
   </header>
 
   <section class="panel search-panel">
     <div class="section-title">
-      <div><span>01</span><h2>筛选 OTA</h2></div>
-      <small>目录实时来自 OTA API；手动查询作为兜底</small>
+      <div><span>01</span><h2>选择 OTA 条件</h2></div>
+      <small id="archive-state">第三方目录加载中…</small>
     </div>
-    <div class="mode-switch" role="group" aria-label="筛选方式">
+
+    <div class="mode-switch" role="group" aria-label="查询方式">
       <button id="catalog-mode-btn" class="mode-btn active" type="button">目录选择</button>
-      <button id="manual-mode-btn" class="mode-btn" type="button">手动查询</button>
+      <button id="manual-mode-btn" class="mode-btn" type="button">手动输入兜底</button>
     </div>
-    <div id="catalog-fields" class="fields dropdown-fields">
-      <label>设备
-        <select id="device" disabled><option value="">正在加载设备目录…</option></select>
+
+    <div id="catalog-fields" class="fields catalog-fields">
+      <label>包类型
+        <select id="package-type"><option value="">正在准备包类型…</option></select>
       </label>
-      <label>地区
-        <select id="region" disabled><option value="">请先选择设备</option></select>
+      <label>品牌
+        <select id="brand" disabled><option value="">请先选择包类型</option></select>
+      </label>
+      <label>系列
+        <select id="series" disabled><option value="">请先选择品牌</option></select>
+      </label>
+      <label>机型
+        <select id="device" disabled><option value="">请先选择系列</option></select>
       </label>
       <label>固件版本
-        <select id="release" disabled><option value="">请先选择地区</option></select>
+        <select id="version" disabled><option value="">请先选择机型</option></select>
       </label>
     </div>
-    <div id="manual-fields" class="manual-section" hidden>
-      <div class="fields manual-fields">
-        <label>设备名称<input id="manual-device" type="text" placeholder="例如：OP 13（OnePlus 13）" autocomplete="off" spellcheck="false"></label>
-        <label>地区代码<input id="manual-region" type="text" placeholder="例如：EU / GLO / CN" autocomplete="off" spellcheck="false"></label>
-        <label>型号代码<input id="manual-model" type="text" placeholder="例如：CPH2653" autocomplete="off" spellcheck="false"></label>
-        <label>发布 ID<input id="manual-id" type="text" placeholder="精确查询时填写" autocomplete="off" spellcheck="false"></label>
-      </div>
-      <div class="manual-match">
-        <label>匹配版本
-          <select id="manual-release" disabled><option value="">请先查询匹配版本</option></select>
-        </label>
-        <button id="manual-search-btn" type="button">查询匹配版本</button>
-      </div>
-    </div>
+
     <div id="catalog-actions" class="actions">
-      <button id="search-btn" class="primary" type="button" disabled>解析下载链接</button>
+      <button id="resolve-btn" class="primary" type="button" disabled>解析下载链接</button>
       <button id="clear-btn" type="button">重置选择</button>
       <button id="reload-btn" type="button">重新加载目录</button>
     </div>
+
+    <div id="manual-fields" class="manual-section" hidden>
+      <div class="fields manual-fields">
+        <label>包类型
+          <select id="manual-package-type">
+            <option value="full">全量包</option>
+            <option value="afterSales">售后包</option>
+          </select>
+        </label>
+        <label>品牌<input id="manual-brand" type="text" placeholder="例如：OnePlus" autocomplete="off" spellcheck="false"></label>
+        <label>系列<input id="manual-series" type="text" placeholder="例如：数字系列" autocomplete="off" spellcheck="false"></label>
+        <label>机型<input id="manual-device" type="text" placeholder="例如：[普通]一加9" autocomplete="off" spellcheck="false"></label>
+        <label>固件版本<input id="manual-version" type="text" placeholder="例如：ColorOS 11.2 A.03" autocomplete="off" spellcheck="false"></label>
+      </div>
+    </div>
+
     <div id="manual-actions" class="actions" hidden>
-      <button id="manual-resolve-btn" class="primary" type="button" disabled>解析下载链接</button>
+      <button id="manual-resolve-btn" class="primary" type="button">解析下载链接</button>
       <button id="manual-clear-btn" type="button">清空手动条件</button>
     </div>
-    <p id="status" class="status">正在加载 OTA 目录…</p>
+    <p id="status" class="status">请选择包类型。</p>
   </section>
 
   <section class="results-section">
     <div class="section-title">
       <div><span>02</span><h2>解析结果</h2></div>
-      <small id="catalog-time"></small>
+      <small>固定链接优先；动态签名链接可能随时间过期</small>
     </div>
     <div id="results" class="results">
-      <div class="empty"><b>尚未选择版本</b><span>依次选择设备、地区和固件版本。</span></div>
+      <div class="empty"><b>尚未解析版本</b><span>从上方目录选择，或切换到手动输入兜底。</span></div>
     </div>
   </section>
 
   <template id="release-template">
     <article class="release-card">
       <div class="release-head">
-        <div><span class="device"></span><span class="region"></span></div>
-        <span class="latest-badge">最新</span>
+        <div><span class="device"></span><span class="brand"></span><span class="series"></span></div>
+        <span class="package-type-value badge"></span>
       </div>
       <h3 class="version"></h3>
-      <p class="ota-version"></p>
-      <dl>
-        <div><dt>型号</dt><dd class="model"></dd></div>
-        <div><dt>安全补丁</dt><dd class="patch"></dd></div>
-        <div><dt>构建时间</dt><dd class="build-time"></dd></div>
-        <div><dt>包大小</dt><dd class="size"></dd></div>
-        <div><dt>MD5</dt><dd class="md5"></dd></div>
-        <div><dt>发布 ID</dt><dd class="release-id-value"></dd></div>
+      <dl class="result-meta">
+        <div><dt>来源</dt><dd class="source-value"></dd></div>
+        <div><dt>传输安全</dt><dd class="security-value"></dd></div>
+        <div><dt>动态签名</dt><dd class="dynamic-value"></dd></div>
       </dl>
       <div class="link-box">
         <span class="link-label">下载链接</span>
@@ -87,7 +94,6 @@
       </div>
       <div class="card-actions">
         <button class="copy-btn primary" type="button">复制下载链接</button>
-        <button class="source-btn" type="button">复制源地址</button>
       </div>
     </article>
   </template>
